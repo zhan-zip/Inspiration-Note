@@ -114,13 +114,6 @@ function onListPointerEnd() {
   tracking = false
 }
 
-/* ---------- 灵感项目标注 ---------- */
-function projectLabel(idea) {
-  if (idea.status === 'pending') return '待转'
-  if (!idea.project_id) return '无项目'
-  return projectStore.activeProjects.find((p) => p.id === idea.project_id)?.name ?? '无项目'
-}
-
 /* ---------- 转为任务 ---------- */
 const convertId = ref(null)
 const convertMode = ref('existing') // existing / new / none
@@ -210,20 +203,11 @@ async function confirmRemove() {
         >
           <div class="idea-item">
             <p class="idea-content">{{ idea.content }}</p>
-            <div class="idea-meta">
-              <span class="idea-project">{{ projectLabel(idea) }}</span>
-              <span class="idea-time">{{ idea.created_at.slice(0, 10) }}</span>
-            </div>
-            <button
-              v-if="idea.status === 'pending'"
-              class="btn btn-dark convert-btn"
-              @click="openConvert(idea)"
-            >
-              转为任务
-            </button>
+            <p class="idea-time">{{ idea.created_at.slice(0, 10) }}</p>
           </div>
           <template #actions="{ close }">
-            <button class="swipe-action" @click="removeId = idea.id; close()">删除</button>
+            <button class="swipe-action convert" @click="openConvert(idea); close()">转为任务</button>
+            <button class="swipe-action delete" @click="removeId = idea.id; close()">删除</button>
           </template>
         </SwipeItem>
       </template>
@@ -356,36 +340,29 @@ async function confirmRemove() {
   word-break: break-word;
 }
 
-.idea-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.idea-project {
-  font-size: 12px;
-  color: var(--gray);
-}
-
 .idea-time {
   font-size: 12px;
   color: var(--gray);
-}
-
-.convert-btn {
-  font-size: 13px;
-  padding: 4px 12px;
+  margin: 0;
 }
 
 .swipe-action {
   height: 100%;
-  width: 72px;
   border: none;
+  font-size: 13px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.swipe-action.convert {
+  background: var(--bg);
+  color: var(--fg);
+  border-left: 1px solid var(--fg);
+}
+
+.swipe-action.delete {
   background: var(--fg);
   color: var(--bg);
-  font-size: 14px;
-  cursor: pointer;
 }
 
 .modal-title {

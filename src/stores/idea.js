@@ -7,14 +7,11 @@ export const useIdeaStore = defineStore('idea', {
     ideas: [],
   }),
   getters: {
-    /** 正常灵感（未软删除）：未转优先，再按创建时间倒序 */
+    /** 正常灵感：仅显示未转（转任务后从灵感列表消失），按创建时间倒序 */
     activeIdeas(state) {
       return state.ideas
-        .filter((i) => !i.deleted_at)
-        .sort((a, b) => {
-          if (a.status !== b.status) return a.status === 'pending' ? -1 : 1
-          return new Date(b.created_at) - new Date(a.created_at)
-        })
+        .filter((i) => !i.deleted_at && i.status === 'pending')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     },
     /** 回收站里的灵感（已软删除） */
     trashedIdeas(state) {

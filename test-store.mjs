@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useIdeaStore } from './src/stores/idea.js'
 import { useProjectStore } from './src/stores/project.js'
 import { useTaskStore } from './src/stores/task.js'
+import assert from 'node:assert'
 
 setActivePinia(createPinia())
 const ideaStore = useIdeaStore()
@@ -38,6 +39,13 @@ await taskStore.create({ name: i3.content, project_id: null })
 await ideaStore.markConverted(i3.id, null)
 const s3 = ideaStore.ideas.find((i) => i.id === i3.id)
 console.log('场景3 无项目 → 标签:', labelFor(s3), '(应=无项目)')
+
+// 场景 4：转任务后灵感从列表消失
+const i4 = await ideaStore.create('转后应消失')
+assert.ok(ideaStore.activeIdeas.some((i) => i.id === i4.id), '转前应在列表')
+await ideaStore.markConverted(i4.id, null)
+assert.ok(!ideaStore.activeIdeas.some((i) => i.id === i4.id), '转后应离开列表')
+console.log('场景4 转任务后消失 ✅')
 
 const ok =
   labelFor(s1) === '食光记' && labelFor(s2) === '新项目A' && labelFor(s3) === '无项目'

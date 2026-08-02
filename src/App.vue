@@ -12,7 +12,6 @@ const navItems = [
   { path: '/calendar', label: '日历' },
   { path: '/today', label: '今日' },
   { path: '/review', label: '复盘' },
-  { path: '/projects', label: '项目' },
   { path: '/trash', label: '回收站' },
 ]
 

@@ -15,14 +15,15 @@ onMounted(async () => {
   await Promise.all([taskStore.load(), projectStore.load()])
 })
 
-/* 所有未删除任务（含已安排到日历的），按创建时间倒序 */
-const tasks = computed(() =>
-  [...taskStore.activeTasks].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+/* 列表条目：项目条目 + 无项目任务条目 */
+const projectEntries = computed(() => projectStore.activeProjects)
+const noProjectTasks = computed(() =>
+  [...taskStore.activeTasks]
+    .filter((t) => !t.project_id)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
 )
 
-const projectNameOf = (id) => projectStore.activeProjects.find((p) => p.id === id)?.name ?? ''
-
-/* 点击项目 → 进入该项目任务列表页 */
+/* 点击项目条目 → 进入该项目任务列表页 */
 function goProject(id) {
   router.push(`/project/${id}`)
 }
@@ -55,7 +56,21 @@ async function confirmNewProject() {
   showNewProject.value = false
 }
 
-/* ---------- 编辑任务（改名 + 移动项目） ---------- */
+/* ---------- 重命名项目 ---------- */
+const renameProject = ref(null)
+const renameName = ref('')
+function openRenameProject(p) {
+  renameProject.value = p
+  renameName.value = p.name
+}
+async function confirmRenameProject() {
+  if (renameProject.value && renameName.value.trim()) {
+    await projectStore.rename(renameProject.value.id, renameName.value)
+  }
+  renameProject.value = null
+}
+
+/* ---------- 编辑无项目任务（改名 + 移动项目） ---------- */
 const editTask = ref(null)
 const editName = ref('')
 const editProjectId = ref('')
@@ -73,47 +88,62 @@ async function confirmEdit() {
   editTask.value = null
 }
 
-/* ---------- 删除（自绘确认 + 软删除） ---------- */
-const removeId = ref(null)
-async function confirmRemove() {
-  if (removeId.value) await taskStore.softDelete(removeId.value)
-  removeId.value = null
+/* ---------- 删除 ---------- */
+const removeProjectId = ref(null)
+const removeTaskId = ref(null)
+async function confirmRemoveProject() {
+  if (removeProjectId.value) await projectStore.softDelete(removeProjectId.value)
+  removeProjectId.value = null
+}
+async function confirmRemoveTask() {
+  if (removeTaskId.value) await taskStore.softDelete(removeTaskId.value)
+  removeTaskId.value = null
 }
 </script>
 
 <template>
   <div class="page">
-    <div class="page-head">
-      <h1 class="page-title">任务列表</h1>
-    </div>
+    <h1 class="page-title">任务列表</h1>
 
     <div class="quick-actions">
       <button class="btn btn-dark" @click="openAdd">+ 新建任务</button>
       <button class="btn" @click="openNewProject">+ 新建项目</button>
     </div>
 
-    <p class="page-sub">共 {{ tasks.length }} 个任务</p>
+    <p class="page-sub">{{ projectEntries.length }} 个项目 · {{ noProjectTasks.length }} 个无项目任务</p>
 
-    <div class="task-list">
-      <template v-if="tasks.length">
-        <SwipeItem v-for="task in tasks" :key="task.id">
-          <div class="task-item">
-            <span class="task-name">{{ task.name }}</span>
-            <button
-              v-if="task.project_id"
-              class="task-project"
-              @click.stop="goProject(task.project_id)"
-            >
-              {{ projectNameOf(task.project_id) }}
-            </button>
+    <div class="entry-list">
+      <!-- 项目条目 -->
+      <template v-if="projectEntries.length">
+        <SwipeItem v-for="p in projectEntries" :key="p.id">
+          <div class="entry" @click="goProject(p.id)">
+            <span class="tag project-tag">项目</span>
+            <span class="entry-name">{{ p.name }}</span>
           </div>
           <template #actions="{ close }">
-            <button class="swipe-action edit" @click="openEditTask(task); close()">编辑</button>
-            <button class="swipe-action delete" @click="removeId = task.id; close()">删除</button>
+            <button class="swipe-action edit" @click="openRenameProject(p); close()">重命名</button>
+            <button class="swipe-action delete" @click="removeProjectId = p.id; close()">删除</button>
           </template>
         </SwipeItem>
       </template>
-      <p v-else class="empty">还没有任务，点上方新建</p>
+
+      <!-- 无项目任务条目 -->
+      <template v-if="noProjectTasks.length">
+        <SwipeItem v-for="t in noProjectTasks" :key="t.id">
+          <div class="entry">
+            <span class="tag task-tag">任务</span>
+            <span class="entry-name">{{ t.name }}</span>
+          </div>
+          <template #actions="{ close }">
+            <button class="swipe-action edit" @click="openEditTask(t); close()">编辑</button>
+            <button class="swipe-action delete" @click="removeTaskId = t.id; close()">删除</button>
+          </template>
+        </SwipeItem>
+      </template>
+
+      <p v-if="!projectEntries.length && !noProjectTasks.length" class="empty">
+        还没有项目或任务，点上方新建
+      </p>
     </div>
 
     <!-- 新建任务弹窗 -->
@@ -140,6 +170,16 @@ async function confirmRemove() {
       </div>
     </Modal>
 
+    <!-- 重命名项目弹窗 -->
+    <Modal :show="!!renameProject" @close="renameProject = null">
+      <h2 class="modal-title">重命名项目</h2>
+      <input v-model="renameName" class="input" placeholder="项目名称" @keyup.enter="confirmRenameProject" />
+      <div class="modal-actions">
+        <button class="btn" @click="renameProject = null">取消</button>
+        <button class="btn btn-dark" @click="confirmRenameProject">保存</button>
+      </div>
+    </Modal>
+
     <!-- 编辑任务弹窗 -->
     <Modal :show="!!editTask" @close="editTask = null">
       <h2 class="modal-title">编辑任务</h2>
@@ -156,20 +196,23 @@ async function confirmRemove() {
 
     <!-- 删除确认浮窗 -->
     <ConfirmDialog
-      :show="!!removeId"
+      :show="!!removeProjectId"
+      message="删除该项目将连带删除其下所有任务（可到回收站恢复），建议先把有用的任务移出去。确定删除吗？"
+      confirm-text="删除项目"
+      @confirm="confirmRemoveProject"
+      @cancel="removeProjectId = null"
+    />
+    <ConfirmDialog
+      :show="!!removeTaskId"
       message="确定删除这个任务吗？（可在回收站恢复）"
       confirm-text="删除"
-      @confirm="confirmRemove"
-      @cancel="removeId = null"
+      @confirm="confirmRemoveTask"
+      @cancel="removeTaskId = null"
     />
   </div>
 </template>
 
 <style scoped>
-.page-head {
-  display: flex;
-  align-items: center;
-}
 .page-title {
   font-size: 26px;
   margin: 4px 0;
@@ -184,28 +227,32 @@ async function confirmRemove() {
   font-size: 13px;
   margin: 4px 0 12px;
 }
-.task-list {
+.entry-list {
   border-top: 1px solid var(--light);
 }
-.task-item {
+.entry {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 15px 2px;
   border-bottom: 1px solid var(--light);
 }
-.task-name {
-  flex: 1;
+.entry-name {
   font-size: 16px;
 }
-.task-project {
-  border: none;
-  background: var(--light);
-  color: var(--gray);
+.tag {
   font-size: 12px;
-  padding: 3px 10px;
-  cursor: pointer;
+  padding: 2px 8px;
   border-radius: 2px;
+  flex-shrink: 0;
+}
+.project-tag {
+  background: var(--fg);
+  color: var(--bg);
+}
+.task-tag {
+  border: 1px solid var(--mid);
+  color: var(--gray);
 }
 .swipe-action {
   height: 100%;

@@ -24,15 +24,19 @@ const drawerX = computed(() => `${(open.value - 1) * 100}%`)
 const mainX = computed(() => `${open.value * 30}%`)
 
 // 手势状态（Pointer 事件：鼠标 + 触摸 + 触控笔统一支持）
+// 左滑 = 返回：子页（项目任务页）先返回上一级，一级页才打开抽屉
 const startX = ref(0)
 const startY = ref(0)
 const startOpen = ref(false)
+const isChild = computed(() => route.path.startsWith('/project/'))
+let totalDx = 0
 
 function onPointerDown(e) {
   startX.value = e.clientX
   startY.value = e.clientY
   startOpen.value = open.value > 0.5
   dragging.value = false
+  totalDx = 0
 }
 
 function onPointerMove(e) {
@@ -40,24 +44,32 @@ function onPointerMove(e) {
   if (e.buttons === 0) return
   const dx = e.clientX - startX.value
   const dy = e.clientY - startY.value
-  // 横向位移主导才认作抽屉手势，避免与页面纵向滚动冲突
-  if (!dragging.value) {
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
-      dragging.value = true
-    } else {
-      return
-    }
-  }
-  const max = window.innerWidth * 0.35
-  // 关闭时：向右拉（dx>0）→ 抽屉从左被拉出；打开时：向左推（dx<0）→ 抽屉收回
-  let pct = startOpen.value ? 1 + dx / max : dx / max
-  open.value = Math.max(0, Math.min(1, pct))
+  // 横向位移主导才认作手势，避免与页面纵向滚动冲突
+  if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) <= 8) return
+  dragging.value = true
+  totalDx = dx
   e.preventDefault()
+  // 子页：横向手势完全用于"返回"，完全不碰抽屉状态
+  if (isChild.value) return
+  const max = window.innerWidth * 0.35
+  let pct
+  if (startOpen.value) {
+    // 抽屉开着：向左推关闭，向右拉保持
+    pct = 1 + dx / max
+  } else {
+    // 抽屉关着：只有右拉（自左向右）打开；左滑不动
+    pct = dx / max
+  }
+  open.value = Math.max(0, Math.min(1, pct))
 }
 
 function onPointerEnd() {
   dragging.value = false
   open.value = open.value > 0.5 ? 1 : 0
+  // 子页左滑超过阈值 → 返回上一级（任务列表）
+  if (isChild.value && totalDx < -60 && open.value < 0.5) {
+    router.back()
+  }
 }
 
 // 点击页面名 → 关闭抽屉 + 切换页面

@@ -1,0 +1,85 @@
+/* 黑白主题：以白为主，黑灰阶统一走 CSS 变量 */
+:root {
+  --bg: #ffffff;
+  --fg: #111111;
+  --dark: #000000;
+  --mid: #cccccc;
+  --gray: #999999;
+  --light: #f5f5f5;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100dvh;
+}
+
+/* 通用页面容器 */
+.page {
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px;
+}
+
+/* 通用按钮 */
+.btn {
+  border: 1px solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 6px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.btn-dark {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn:active {
+  opacity: 0.6;
+}
+
+/* 通用输入框 */
+.input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--mid);
+  background: transparent;
+  color: var(--fg);
+  font-size: 16px;
+  padding: 10px 2px;
+  outline: none;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-bottom-color: var(--fg);
+}
+
+/* 通用空状态 */
+.empty {
+  text-align: center;
+  color: var(--gray);
+  font-size: 14px;
+  padding: 40px 0;
+}

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import * as db from '../db/db'
+import * as db from '../db/db.js'
 
 /** 灵感 store */
 export const useIdeaStore = defineStore('idea', {
@@ -34,17 +34,18 @@ export const useIdeaStore = defineStore('idea', {
         content: content.trim(),
         created_at: db.nowISO(),
         status: 'pending', // pending=未转 / converted=已转
+        project_id: null, // 转任务时回填所选项目
         deleted_at: null,
       }
       await db.addItem('ideas', idea)
       await this.load()
       return idea
     },
-    /** 灵感已转为任务 */
-    async markConverted(id) {
+    /** 灵感已转为任务（回填项目归属） */
+    async markConverted(id, projectId = null) {
       const idea = await db.getItem('ideas', id)
       if (idea) {
-        await db.putItem('ideas', { ...idea, status: 'converted' })
+        await db.putItem('ideas', { ...idea, status: 'converted', project_id: projectId })
         await this.load()
       }
     },

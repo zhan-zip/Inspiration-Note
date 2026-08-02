@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import * as db from '../db/db'
-import { useTaskStore } from './task'
+import * as db from '../db/db.js'
+import { useTaskStore } from './task.js'
 
 /** 项目 store */
 export const useProjectStore = defineStore('project', {

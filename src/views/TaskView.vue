@@ -5,6 +5,7 @@ import { useProjectStore } from '../stores/project'
 import { useScheduleStore } from '../stores/schedule'
 import SwipeItem from '../components/SwipeItem.vue'
 import Modal from '../components/Modal.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
@@ -56,11 +57,11 @@ async function confirmEdit() {
   editTask.value = null
 }
 
-/* ---------- 删除（软删除进回收站） ---------- */
-async function removeTask(id) {
-  if (confirm('确定删除这个任务吗？（可在回收站恢复）')) {
-    await taskStore.softDelete(id)
-  }
+/* ---------- 删除（自绘确认 + 软删除进回收站） ---------- */
+const removeId = ref(null)
+async function confirmRemove() {
+  if (removeId.value) await taskStore.softDelete(removeId.value)
+  removeId.value = null
 }
 </script>
 
@@ -81,7 +82,7 @@ async function removeTask(id) {
             <span v-if="task.project_id" class="task-project">{{ projectNameOf(task.project_id) }}</span>
           </div>
           <template #actions="{ close }">
-            <button class="swipe-action" @click="removeTask(task.id); close()">删除</button>
+            <button class="swipe-action" @click="removeId = task.id; close()">删除</button>
           </template>
         </SwipeItem>
       </template>
@@ -115,6 +116,14 @@ async function removeTask(id) {
         <button class="btn btn-dark" @click="confirmEdit">保存</button>
       </div>
     </Modal>
+
+    <!-- 删除确认浮窗 -->
+    <ConfirmDialog
+      :show="!!removeId"
+      message="确定删除这个任务吗？（可在回收站恢复）"
+      @confirm="confirmRemove"
+      @cancel="removeId = null"
+    />
   </div>
 </template>
 

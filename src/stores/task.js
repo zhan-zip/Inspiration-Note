@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import * as db from '../db/db'
-import { useScheduleStore } from './schedule'
-import { useCompletionStore } from './completion'
+import * as db from '../db/db.js'
+import { useScheduleStore } from './schedule.js'
+import { useCompletionStore } from './completion.js'
 
 /** 任务 store */
 export const useTaskStore = defineStore('task', {

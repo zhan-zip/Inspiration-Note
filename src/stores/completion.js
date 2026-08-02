@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import * as db from '../db/db'
+import * as db from '../db/db.js'
 
 /** 完成记录 store：task_id + date 记录某天完成任务（复盘页用） */
 export const useCompletionStore = defineStore('completion', {

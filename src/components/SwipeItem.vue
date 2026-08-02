@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 /**
  * 右滑露出操作按钮的列表项（iOS 风格）
+ * 使用 Pointer 事件：鼠标按住拖动 + 手机触摸均可
  * 用法：
  *   <SwipeItem>
  *     内容
@@ -16,26 +17,27 @@ const offset = ref(0)
 let startX = 0
 let tracking = false
 
-function onTouchStart(e) {
-  startX = e.touches[0].clientX
+function onPointerStart(e) {
+  startX = e.clientX
   tracking = true
 }
 
-function onTouchMove(e) {
+function onPointerMove(e) {
   if (!tracking) return
-  const dx = e.touches[0].clientX - startX
+  if (e.buttons === 0) return
+  const dx = e.clientX - startX
   if (Math.abs(dx) < 8) return
   e.preventDefault()
   if (offset.value < 0) {
-    // 已展开：右滑关闭
+    // 已展开：向右拖关闭
     if (dx > 8) close()
   } else {
-    // 收起态：右滑展开
-    if (dx > 40) open()
+    // 收起态：向左拖（dx<0）露出右侧删除
+    if (dx < -40) open()
   }
 }
 
-function onTouchEnd() {
+function onPointerEnd() {
   tracking = false
 }
 
@@ -57,10 +59,10 @@ function close() {
     <div
       class="swipe-content"
       :style="{ transform: `translateX(${offset}px)` }"
-      @touchstart="onTouchStart"
-      @touchmove="onTouchMove"
-      @touchend="onTouchEnd"
-      @touchcancel="onTouchEnd"
+      @pointerdown="onPointerStart"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerEnd"
+      @pointercancel="onPointerEnd"
     >
       <slot />
     </div>

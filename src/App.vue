@@ -24,21 +24,23 @@ const dragging = ref(false)
 const drawerX = computed(() => `${(open.value - 1) * 100}%`)
 const mainX = computed(() => `${open.value * 30}%`)
 
-// 手势状态
+// 手势状态（Pointer 事件：鼠标 + 触摸 + 触控笔统一支持）
 const startX = ref(0)
 const startY = ref(0)
 const startOpen = ref(false)
 
-function onTouchStart(e) {
-  startX.value = e.touches[0].clientX
-  startY.value = e.touches[0].clientY
+function onPointerDown(e) {
+  startX.value = e.clientX
+  startY.value = e.clientY
   startOpen.value = open.value > 0.5
   dragging.value = false
 }
 
-function onTouchMove(e) {
-  const dx = e.touches[0].clientX - startX.value
-  const dy = e.touches[0].clientY - startY.value
+function onPointerMove(e) {
+  // 鼠标未按住（hover 移动）不处理，只有按下拖动才触发手势
+  if (e.buttons === 0) return
+  const dx = e.clientX - startX.value
+  const dy = e.clientY - startY.value
   // 横向位移主导才认作抽屉手势，避免与页面纵向滚动冲突
   if (!dragging.value) {
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
@@ -48,12 +50,13 @@ function onTouchMove(e) {
     }
   }
   const max = window.innerWidth * 0.35
-  let pct = startOpen.value ? 1 + dx / max : -dx / max
+  // 关闭时：向右拉（dx>0）→ 抽屉从左被拉出；打开时：向左推（dx<0）→ 抽屉收回
+  let pct = startOpen.value ? 1 + dx / max : dx / max
   open.value = Math.max(0, Math.min(1, pct))
   e.preventDefault()
 }
 
-function onTouchEnd() {
+function onPointerEnd() {
   dragging.value = false
   open.value = open.value > 0.5 ? 1 : 0
 }
@@ -89,10 +92,10 @@ function go(item) {
       class="main"
       :class="{ dragging }"
       :style="{ transform: `translateX(${mainX})` }"
-      @touchstart="onTouchStart"
-      @touchmove="onTouchMove"
-      @touchend="onTouchEnd"
-      @touchcancel="onTouchEnd"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerEnd"
+      @pointercancel="onPointerEnd"
     >
       <RouterView />
     </main>
@@ -128,6 +131,9 @@ function go(item) {
   bottom: 0;
   background: var(--bg);
   z-index: 20;
+  /* 允许垂直滚动，水平手势交给 JS（抽屉） */
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .drawer,

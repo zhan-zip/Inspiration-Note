@@ -1,10 +1,11 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
-import { useIdeaStore } from '../stores/idea'
-import { useTaskStore } from '../stores/task'
-import { useProjectStore } from '../stores/project'
+import { ref, computed, onMounted } from 'vue'
+import { useIdeaStore } from '../stores/idea.js'
+import { useTaskStore } from '../stores/task.js'
+import { useProjectStore } from '../stores/project.js'
 import SwipeItem from '../components/SwipeItem.vue'
 import Modal from '../components/Modal.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const ideaStore = useIdeaStore()
 const taskStore = useTaskStore()
@@ -23,37 +24,101 @@ async function addIdea() {
   draft.value = ''
 }
 
-/* ---------- 下拉展开记录 / 上拉收起 ---------- */
+/* ---------- 下拉展开 / 上拉收起（全屏覆盖层跟随手指） ---------- */
 const expanded = ref(false)
+const dragging = ref(false)
+const dragY = ref(0)
 const listEl = ref(null)
+let startX = 0
 let startY = 0
 let tracking = false
 
-function onTouchStart(e) {
-  startY = e.touches[0].clientY
+/* 列表可视高度（用于限制拖动范围，防止拖出屏幕外卡住） */
+function listMax() {
+  return listEl.value ? listEl.value.clientHeight : 400
+}
+function clampY(v) {
+  const m = listMax()
+  return Math.max(-m, Math.min(m, v))
+}
+
+const listStyle = computed(() => {
+  if (dragging.value) {
+    // 下拉（从顶部盖下来）：dragY>0 → -100% 开始跟随；上拉收回：dragY<0 → 从 0 跟随
+    if (dragY.value >= 0) return { transform: `translateY(calc(-100% + ${dragY.value}px))` }
+    return { transform: `translateY(${dragY.value}px)` }
+  }
+  return { transform: expanded.value ? 'translateY(0)' : 'translateY(-100%)' }
+})
+
+/* 根区域手势：只负责"下拉展开"（收起态时触摸在可见区；横向拖动交给抽屉） */
+function onPointerStart(e) {
+  startX = e.clientX
+  startY = e.clientY
   tracking = true
+  dragging.value = false
 }
 
-function onTouchMove(e) {
+function onPointerMove(e) {
   if (!tracking) return
-  const dy = e.touches[0].clientY - startY
-  const atTop = !listEl.value || listEl.value.scrollTop <= 1
-  // 收起态：下拉超过阈值 → 展开列表
-  if (!expanded.value && dy > 50) {
-    expanded.value = true
-    tracking = false
-    e.preventDefault()
-  }
-  // 展开态：列表在顶部且上拉超过阈值 → 收起回记录
-  else if (expanded.value && dy < -50 && atTop) {
-    expanded.value = false
-    tracking = false
+  if (e.buttons === 0) return
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
+  if (Math.abs(dx) > Math.abs(dy)) return // 横向拖动交给抽屉
+  if (!expanded.value && dy > 0) {
+    dragging.value = true
+    dragY.value = clampY(dy)
     e.preventDefault()
   }
 }
 
-function onTouchEnd() {
+function onPointerEnd() {
+  if (tracking) {
+    dragging.value = false
+    // 拉一点点（30px）松手即自动滑满
+    if (!expanded.value && dragY.value > 30) expanded.value = true
+    dragY.value = 0
+  }
   tracking = false
+}
+
+/* 覆盖层手势：负责"上拉收回"；横向拖动交给抽屉；仅在空白区拦截灵感项之外 */
+function onListPointerStart(e) {
+  startX = e.clientX
+  startY = e.clientY
+  tracking = true
+  dragging.value = false
+}
+
+function onListPointerMove(e) {
+  if (!tracking) return
+  if (e.buttons === 0) return
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
+  if (Math.abs(dx) > Math.abs(dy)) return // 横向拖动交给抽屉
+  const atTop = !listEl.value || listEl.value.scrollTop <= 1
+  if (expanded.value && dy < 0 && atTop) {
+    dragging.value = true
+    dragY.value = clampY(dy)
+    e.preventDefault()
+  }
+}
+
+function onListPointerEnd() {
+  if (tracking) {
+    dragging.value = false
+    // 拉一点点（20px）松手即自动收回
+    if (expanded.value && dragY.value < -20) expanded.value = false
+    dragY.value = 0
+  }
+  tracking = false
+}
+
+/* ---------- 灵感项目标注 ---------- */
+function projectLabel(idea) {
+  if (idea.status === 'pending') return '待转'
+  if (!idea.project_id) return '无项目'
+  return projectStore.activeProjects.find((p) => p.id === idea.project_id)?.name ?? '无项目'
 }
 
 /* ---------- 转为任务 ---------- */
@@ -85,20 +150,27 @@ async function confirmConvert() {
     projectId = p.id
   }
   await taskStore.create({ name: idea.content, project_id: projectId })
-  await ideaStore.markConverted(convertId.value)
+  // 转任务成功后：回填项目归属到该灵感
+  await ideaStore.markConverted(convertId.value, projectId)
   closeConvert()
 }
 
-/* ---------- 右滑删除（软删除） ---------- */
-async function removeIdea(id) {
-  if (confirm('确定删除这条灵感吗？（可在回收站恢复）')) {
-    await ideaStore.softDelete(id)
-  }
+/* ---------- 删除（自绘确认浮窗 + 软删除） ---------- */
+const removeId = ref(null)
+async function confirmRemove() {
+  if (removeId.value) await ideaStore.softDelete(removeId.value)
+  removeId.value = null
 }
 </script>
 
 <template>
-  <div class="page idea-page" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
+  <div
+    class="page idea-page"
+    @pointerdown="onPointerStart"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+  >
     <!-- 大字提问 -->
     <h1 class="idea-title">记录一个灵感吗？</h1>
 
@@ -113,14 +185,33 @@ async function removeIdea(id) {
       {{ expanded ? '↑ 上拉收起 · 回到记录' : '↓ 下拉查看所有灵感' }}
     </p>
 
-    <!-- 灵感列表（下拉展开） -->
-    <div v-show="expanded" ref="listEl" class="idea-list">
+    <!-- 灵感列表：全屏覆盖层（.stop 阻止冒泡，拖灵感不会带动外层抽屉） -->
+    <div
+      ref="listEl"
+      class="idea-list"
+      :class="{ 'no-transition': dragging }"
+      :style="listStyle"
+      @pointerdown="onListPointerStart"
+      @pointermove="onListPointerMove"
+      @pointerup="onListPointerEnd"
+      @pointercancel="onListPointerEnd"
+    >
+      <div class="list-handle" />
+      <h2 class="list-title">所有灵感</h2>
+
       <template v-if="ideaStore.activeIdeas.length">
-        <SwipeItem v-for="idea in ideaStore.activeIdeas" :key="idea.id">
+        <SwipeItem
+          v-for="idea in ideaStore.activeIdeas"
+          :key="idea.id"
+          @pointerdown.stop
+          @pointermove.stop
+          @pointerup.stop
+          @pointercancel.stop
+        >
           <div class="idea-item">
             <p class="idea-content">{{ idea.content }}</p>
             <div class="idea-meta">
-              <span v-if="idea.status === 'converted'" class="converted-tag">已转任务</span>
+              <span class="idea-project">{{ projectLabel(idea) }}</span>
               <span class="idea-time">{{ idea.created_at.slice(0, 10) }}</span>
             </div>
             <button
@@ -132,7 +223,7 @@ async function removeIdea(id) {
             </button>
           </div>
           <template #actions="{ close }">
-            <button class="swipe-action" @click="removeIdea(idea.id); close()">删除</button>
+            <button class="swipe-action" @click="removeId = idea.id; close()">删除</button>
           </template>
         </SwipeItem>
       </template>
@@ -177,15 +268,24 @@ async function removeIdea(id) {
         <button class="btn btn-dark" @click="confirmConvert">确认</button>
       </div>
     </Modal>
+
+    <!-- 删除确认浮窗 -->
+    <ConfirmDialog
+      :show="!!removeId"
+      message="确定删除这条灵感吗？（可在回收站恢复）"
+      @confirm="confirmRemove"
+      @cancel="removeId = null"
+    />
   </div>
 </template>
 
 <style scoped>
 .idea-page {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   padding: 24px 20px 0;
+  height: 100dvh;
   overflow: hidden;
+  user-select: none;
 }
 
 .idea-title {
@@ -210,11 +310,36 @@ async function removeIdea(id) {
   cursor: pointer;
 }
 
+/* 全屏覆盖层：从顶部盖下来 */
 .idea-list {
-  flex: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  z-index: 5;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-top: 4px;
+  padding: 16px 20px 20px;
+  transition: transform 0.25s ease;
+}
+
+.idea-list.no-transition {
+  transition: none;
+}
+
+.list-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--mid);
+  border-radius: 2px;
+  margin: 6px auto 10px;
+}
+
+.list-title {
+  font-size: 20px;
+  margin: 0 0 4px;
 }
 
 .idea-item {
@@ -225,7 +350,8 @@ async function removeIdea(id) {
 
 .idea-content {
   margin: 0 0 6px;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.5;
   word-break: break-word;
 }
@@ -237,7 +363,7 @@ async function removeIdea(id) {
   margin-bottom: 8px;
 }
 
-.converted-tag {
+.idea-project {
   font-size: 12px;
   color: var(--gray);
 }

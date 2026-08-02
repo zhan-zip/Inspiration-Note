@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import * as db from '../db/db'
+import * as db from '../db/db.js'
 
 /**
  * 日程 store：记录任务的安排

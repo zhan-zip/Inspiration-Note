@@ -13,7 +13,8 @@ onMounted(async () => {
   await Promise.all([completionStore.load(), taskStore.load(), projectStore.load()])
 })
 
-const viewMode = ref('week') // week / month
+const viewMode = ref('week') // day / week / month
+const dayOffset = ref(0)
 const weekOffset = ref(0)
 const monthOffset = ref(0)
 
@@ -39,6 +40,12 @@ function monthRangeByOffset(offset) {
 }
 
 const range = computed(() => {
+  if (viewMode.value === 'day') {
+    const d = new Date()
+    d.setDate(d.getDate() + dayOffset.value)
+    const str = toDateStr(d)
+    return { start: str, end: str, label: str }
+  }
   if (viewMode.value === 'week') {
     const r = weekRangeByOffset(weekOffset.value)
     return { ...r, label: `${r.start} ~ ${r.end}` }
@@ -48,10 +55,12 @@ const range = computed(() => {
 })
 
 function shift(delta) {
-  if (viewMode.value === 'week') weekOffset.value += delta
+  if (viewMode.value === 'day') dayOffset.value += delta
+  else if (viewMode.value === 'week') weekOffset.value += delta
   else monthOffset.value += delta
 }
 function backToday() {
+  dayOffset.value = 0
   weekOffset.value = 0
   monthOffset.value = 0
 }
@@ -87,6 +96,7 @@ const totalCount = computed(() => groups.value.reduce((s, g) => s + g.items.leng
 
     <!-- 周/月切换 -->
     <div class="mode-tabs">
+      <button class="tab" :class="{ active: viewMode === 'day' }" @click="viewMode = 'day'">天</button>
       <button class="tab" :class="{ active: viewMode === 'week' }" @click="viewMode = 'week'">周</button>
       <button class="tab" :class="{ active: viewMode === 'month' }" @click="viewMode = 'month'">月</button>
     </div>

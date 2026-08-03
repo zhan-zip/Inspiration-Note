@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '../stores/task.js'
 import { useProjectStore } from '../stores/project.js'
+import { useScheduleStore } from '../stores/schedule.js'
+import { useCompletionStore } from '../stores/completion.js'
 import SwipeItem from '../components/SwipeItem.vue'
 import Modal from '../components/Modal.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -10,22 +12,40 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 const router = useRouter()
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
+const scheduleStore = useScheduleStore()
+const completionStore = useCompletionStore()
 
 onMounted(async () => {
-  await Promise.all([taskStore.load(), projectStore.load()])
+  await Promise.all([
+    taskStore.load(),
+    projectStore.load(),
+    scheduleStore.load(),
+    completionStore.load(),
+  ])
 })
 
-/* 列表条目：项目条目 + 无项目任务条目 */
+/* 项目条目 */
 const projectEntries = computed(() => projectStore.activeProjects)
+
+/* 无项目且未完成的任务（今日打过勾的已完成 → 不再显示） */
 const noProjectTasks = computed(() =>
-  [...taskStore.activeTasks]
+  taskStore.activeTasks
     .filter((t) => !t.project_id)
+    .filter((t) => completionStore.byTaskId(t.id).length === 0)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
 )
+
+/* 任务是否已安排日程 */
+const hasSchedule = (taskId) => scheduleStore.byTaskId(taskId).length > 0
 
 /* 点击项目条目 → 进入该项目任务列表页 */
 function goProject(id) {
   router.push(`/project/${id}`)
+}
+
+/* 加入日程 → 跳日历页并自动选中该任务 */
+function addToSchedule(task) {
+  router.push({ path: '/calendar', query: { task: task.id } })
 }
 
 /* ---------- 新建任务 ---------- */
@@ -110,16 +130,18 @@ async function confirmRemoveTask() {
       <button class="btn" @click="openNewProject">+ 新建项目</button>
     </div>
 
-    <p class="page-sub">{{ projectEntries.length }} 个项目 · {{ noProjectTasks.length }} 个无项目任务</p>
+    <p class="page-sub">{{ projectEntries.length }} 个项目 · {{ noProjectTasks.length }} 个待办</p>
 
     <div class="entry-list">
-      <!-- 项目条目 -->
+      <!-- 项目条目：单击跳转，左滑重命名/删除 -->
       <template v-if="projectEntries.length">
         <SwipeItem v-for="p in projectEntries" :key="p.id">
-          <div class="entry" @click="goProject(p.id)">
-            <span class="tag project-tag">项目</span>
-            <span class="entry-name">{{ p.name }}</span>
-          </div>
+          <template #default="{ isOpen }">
+            <div class="entry" @click="!isOpen && goProject(p.id)">
+              <span class="tag project-tag">项目</span>
+              <span class="entry-name">{{ p.name }}</span>
+            </div>
+          </template>
           <template #actions="{ close }">
             <button class="swipe-action edit" @click="openRenameProject(p); close()">重命名</button>
             <button class="swipe-action delete" @click="removeProjectId = p.id; close()">删除</button>
@@ -127,12 +149,24 @@ async function confirmRemoveTask() {
         </SwipeItem>
       </template>
 
-      <!-- 无项目任务条目 -->
+      <!-- 无项目未完成任务：标注归属/时间，可加入日程，已安排灰字 -->
       <template v-if="noProjectTasks.length">
         <SwipeItem v-for="t in noProjectTasks" :key="t.id">
-          <div class="entry">
+          <div class="entry" :class="{ scheduled: hasSchedule(t.id) }">
             <span class="tag task-tag">任务</span>
             <span class="entry-name">{{ t.name }}</span>
+            <div class="entry-meta">
+              <span class="meta-item">无项目</span>
+              <span class="meta-item">{{ t.created_at.slice(0, 10) }}</span>
+              <button
+                v-if="!hasSchedule(t.id)"
+                class="btn schedule-btn"
+                @click.stop="addToSchedule(t)"
+              >
+                + 加入日程
+              </button>
+              <span v-else class="meta-item scheduled-tag">已安排</span>
+            </div>
           </div>
           <template #actions="{ close }">
             <button class="swipe-action edit" @click="openEditTask(t); close()">编辑</button>
@@ -233,12 +267,15 @@ async function confirmRemoveTask() {
 .entry {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 15px 2px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 13px 2px;
   border-bottom: 1px solid var(--light);
 }
 .entry-name {
   font-size: 16px;
+  flex: 1;
+  min-width: 80px;
 }
 .tag {
   font-size: 12px;
@@ -253,6 +290,33 @@ async function confirmRemoveTask() {
 .task-tag {
   border: 1px solid var(--mid);
   color: var(--gray);
+}
+/* 已安排日程的任务：整体灰字 */
+.entry.scheduled .entry-name,
+.entry.scheduled .meta-item {
+  color: var(--mid);
+}
+.entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding-left: 2px;
+}
+.meta-item {
+  font-size: 12px;
+  color: var(--gray);
+}
+.schedule-btn {
+  font-size: 12px;
+  padding: 2px 10px;
+  min-height: 32px;
+  min-width: auto;
+  margin-left: auto;
+}
+.scheduled-tag {
+  margin-left: auto;
+  font-size: 12px;
 }
 .swipe-action {
   height: 100%;

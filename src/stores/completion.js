@@ -8,6 +8,7 @@ export const useCompletionStore = defineStore('completion', {
   }),
   getters: {
     byDate: (state) => (date) => state.completions.filter((c) => c.date === date),
+    byTaskId: (state) => (taskId) => state.completions.filter((c) => c.task_id === taskId),
     isCompleted: (state) => (taskId, date) =>
       state.completions.some((c) => c.task_id === taskId && c.date === date),
   },

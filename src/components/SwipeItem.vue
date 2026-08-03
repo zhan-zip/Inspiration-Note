@@ -48,6 +48,14 @@ function open() {
 function close() {
   offset.value = 0
 }
+
+/* 内容点击：若已展开则关闭且不冒泡（避免触发父级跳转），收起态正常冒泡 */
+function onContentClick(e) {
+  if (offset.value < 0) {
+    close()
+    e.stopPropagation()
+  }
+}
 </script>
 
 <template>
@@ -57,16 +65,17 @@ function close() {
     <div ref="actionsRef" class="swipe-actions" :aria-hidden="offset < 0 ? 'false' : 'true'">
       <slot name="actions" :close="close" />
     </div>
-    <!-- 内容区：左滑时左移露出操作 -->
+    <!-- 内容区：左滑时左移露出操作；展开后点击内容关闭且不冒泡 -->
     <div
       class="swipe-content"
       :style="{ transform: `translateX(${offset}px)` }"
+      @click="onContentClick"
       @pointerdown="onPointerStart"
       @pointermove="onPointerMove"
       @pointerup="onPointerEnd"
       @pointercancel="onPointerEnd"
     >
-      <slot />
+      <slot :is-open="offset < 0" :close="close" />
     </div>
   </div>
 </template>

@@ -1,17 +1,24 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useTaskStore } from '../stores/task'
 import { useScheduleStore } from '../stores/schedule'
 import { useProjectStore } from '../stores/project'
 import Modal from '../components/Modal.vue'
+import { toast } from '../toast.js'
 import { toDateStr, todayStr, scheduleActiveOn } from '../utils/date'
 
+const route = useRoute()
 const taskStore = useTaskStore()
 const scheduleStore = useScheduleStore()
 const projectStore = useProjectStore()
 
 onMounted(async () => {
   await Promise.all([taskStore.load(), scheduleStore.load(), projectStore.load()])
+  // 来自「加入日程」跳转：自动选中该任务
+  if (route.query.task) {
+    addTaskId.value = route.query.task
+  }
 })
 
 /* ---------- 月份状态 ---------- */
@@ -98,7 +105,14 @@ const TYPE_LABEL = { once: '单次', weekly: '每周', monthly: '每月', yearly
 /* 添加安排 */
 const addTaskId = ref('')
 const addType = ref('once')
-function openDay(date) {
+async function openDay(date) {
+  // 来自「加入日程」预置的任务：点日期直接安排（单次）
+  if (addTaskId.value) {
+    await scheduleStore.create(addTaskId.value, toDateStr(date), 'once')
+    toast(`已安排到 ${toDateStr(date)}`)
+    addTaskId.value = ''
+    return
+  }
   selected.value = date
   addTaskId.value = ''
   addType.value = 'once'

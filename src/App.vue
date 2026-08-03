@@ -31,14 +31,7 @@ const startY = ref(0)
 const startOpen = ref(false)
 const isChild = computed(() => route.path.startsWith('/project/'))
 let totalDx = 0
-
-function onPointerDown(e) {
-  startX.value = e.clientX
-  startY.value = e.clientY
-  startOpen.value = open.value > 0.5
-  dragging.value = false
-  totalDx = 0
-}
+let pointerCaptured = false
 
 function onPointerMove(e) {
   // 鼠标未按住（hover 移动）不处理，只有按下拖动才触发手势
@@ -49,10 +42,19 @@ function onPointerMove(e) {
   if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) <= 8) return
   dragging.value = true
   totalDx = dx
+  // 判定为拖拽后才捕获指针（避免普通点击的 click 被重定向）
+  if (!pointerCaptured && typeof e.currentTarget?.setPointerCapture === 'function') {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      pointerCaptured = true
+    } catch (err) {
+      /* 忽略捕获失败 */
+    }
+  }
   e.preventDefault()
   // 子页：横向手势完全用于"返回"，完全不碰抽屉状态
   if (isChild.value) return
-  const max = window.innerWidth * 0.35
+  const max = window.innerWidth * 0.28
   let pct
   if (startOpen.value) {
     // 抽屉开着：向左推关闭，向右拉保持
@@ -64,12 +66,35 @@ function onPointerMove(e) {
   open.value = Math.max(0, Math.min(1, pct))
 }
 
+function onPointerDown(e) {
+  startX.value = e.clientX
+  startY.value = e.clientY
+  startOpen.value = open.value > 0.5
+  dragging.value = false
+  totalDx = 0
+  pointerCaptured = false
+}
+
 function onPointerEnd() {
   dragging.value = false
-  open.value = open.value > 0.5 ? 1 : 0
-  // 子页左滑超过阈值 → 返回上一级（任务列表）
-  if (isChild.value && totalDx < -60 && open.value < 0.5) {
-    router.back()
+  // 用「本次累计拖拽位移」决定最终开关，避免松手时停在半开状态
+  const threshold = window.innerWidth * 0.12
+  if (isChild.value) {
+    // 子页：左滑返回上一级
+    if (totalDx < -60) {
+      open.value = 0
+      router.back()
+    } else {
+      open.value = open.value > 0.5 ? 1 : 0
+    }
+    return
+  }
+  if (startOpen.value) {
+    // 抽屉开着：向左推超过阈值 → 关闭，否则保持打开
+    open.value = totalDx < -threshold ? 0 : 1
+  } else {
+    // 抽屉关着：向右拉超过阈值 → 打开，否则保持关闭
+    open.value = totalDx > threshold ? 1 : 0
   }
 }
 
@@ -81,7 +106,14 @@ function go(item) {
 </script>
 
 <template>
-  <div class="app">
+  <!-- 拖拽监听放在最外层：无论鼠标在抽屉/遮罩/主视图哪个区域拖拽都能收到 -->
+  <div
+    class="app"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+  >
     <!-- 左侧页面导航列表（抽屉） -->
     <aside class="drawer" :class="{ dragging }" :style="{ transform: `translateX(${drawerX})` }">
       <div class="drawer-title">灵感笔记</div>
@@ -99,22 +131,14 @@ function go(item) {
       <p class="drawer-foot">本地存储 · 离线可用</p>
     </aside>
 
-    <!-- 遮罩：抽屉打开时盖住主视图，点击关闭 -->
-    <div v-if="open > 0.5" class="drawer-mask" @click="open = 0"></div>
+    <!-- 遮罩：抽屉打开时淡入盖住主视图，点击关闭（平滑过渡，不突然插入） -->
+    <div class="drawer-mask" :class="{ show: open > 0.5 }" @click="open = 0"></div>
 
     <!-- 左缘引导：提示可向右拉展开抽屉（纯视觉，不拦截任何交互） -->
     <div v-if="open < 0.5" class="edge-hint" aria-hidden="true"></div>
 
     <!-- 主视图 -->
-    <main
-      class="main"
-      :class="{ dragging }"
-      :style="{ transform: `translateX(${mainX})` }"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerEnd"
-      @pointercancel="onPointerEnd"
-    >
+    <main class="main" :class="{ dragging }" :style="{ transform: `translateX(${mainX})` }">
       <RouterView />
     </main>
 
@@ -133,6 +157,9 @@ function go(item) {
   height: 100dvh;
   overflow: hidden;
   background: var(--bg);
+  /* 允许垂直滚动，水平拖拽手势交给 JS；防拖拽选中文本 */
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .drawer {
@@ -145,15 +172,22 @@ function go(item) {
   border-right: 1px solid var(--fg);
   display: flex;
   flex-direction: column;
-  z-index: 30;
+  z-index: 100; /* 抽屉绝对最上，防止被遮罩/主视图覆盖 */
 }
 
-/* 遮罩：盖住主视图，点击关闭抽屉 */
+/* 遮罩：盖住主视图，点击关闭抽屉；淡入淡出避免突然出现/消失的卡顿感 */
 .drawer-mask {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 25;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.drawer-mask.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .main {
@@ -171,7 +205,7 @@ function go(item) {
 
 .drawer,
 .main {
-  transition: transform 0.25s ease;
+  transition: transform 0.2s ease-out;
 }
 
 .drawer.dragging,
@@ -190,7 +224,7 @@ function go(item) {
   background: var(--fg);
   border-radius: 0 3px 3px 0;
   opacity: 0.35;
-  z-index: 22;
+  z-index: 40;
   pointer-events: none;
   animation: edge-pulse 2.6s ease-in-out infinite;
 }

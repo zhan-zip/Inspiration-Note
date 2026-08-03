@@ -118,7 +118,7 @@ const totalCount = computed(() => groups.value.reduce((s, g) => s + g.items.leng
         </div>
       </div>
     </template>
-    <p v-else class="empty">这个周期还没有完成记录<br />去「今日」打钩完成一些吧</p>
+    <p v-else class="empty">这个周期还没有完成记录。<br />去「今日」打钩完成一些吧</p>
   </div>
 </template>
 

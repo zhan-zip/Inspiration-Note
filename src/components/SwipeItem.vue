@@ -53,8 +53,8 @@ function close() {
 <template>
   <!-- 根元素阻止 pointer 冒泡：左滑/右滑操作选项时，不带动外层（抽屉/列表层） -->
   <div class="swipe" @pointerdown.stop @pointermove.stop @pointerup.stop @pointercancel.stop>
-    <!-- 右侧操作区（位于内容下层，内容左移后露出） -->
-    <div ref="actionsRef" class="swipe-actions">
+    <!-- 右侧操作区（位于内容下层，内容左移后露出；收起时对读屏隐藏） -->
+    <div ref="actionsRef" class="swipe-actions" :aria-hidden="offset < 0 ? 'false' : 'true'">
       <slot name="actions" :close="close" />
     </div>
     <!-- 内容区：左滑时左移露出操作 -->

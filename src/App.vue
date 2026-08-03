@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { toastState } from './toast.js'
+import { toast, toastState } from './toast.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,6 +95,14 @@ function go(item) {
   open.value = 0
   if (route.path !== item.path) router.push(item.path)
 }
+
+// 首次进入：一次性提示「左滑条目可编辑/删除」
+onMounted(() => {
+  if (!localStorage.getItem('inspiration-guide')) {
+    toast('左滑条目可编辑/删除')
+    localStorage.setItem('inspiration-guide', '1')
+  }
+})
 </script>
 
 <template>
@@ -107,7 +115,12 @@ function go(item) {
     @pointercancel="onPointerEnd"
   >
     <!-- 左侧页面导航列表（抽屉） -->
-    <aside class="drawer" :class="{ dragging }" :style="{ transform: `translateX(${drawerX})` }">
+    <aside
+      class="drawer"
+      :class="{ dragging }"
+      :aria-hidden="open < 0.5 ? 'true' : 'false'"
+      :style="{ transform: `translateX(${drawerX})` }"
+    >
       <div class="drawer-title">灵感笔记</div>
       <nav class="drawer-nav">
         <button

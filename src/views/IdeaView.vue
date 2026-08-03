@@ -124,7 +124,7 @@ const newProjectName = ref('')
 
 function openConvert(idea) {
   convertId.value = idea.id
-  convertMode.value = 'existing'
+  convertMode.value = 'none' // 默认「无项目」一步转任务，归入项目可选
   convertProjectId.value = projectStore.activeProjects[0]?.id ?? ''
   newProjectName.value = ''
 }
@@ -185,6 +185,7 @@ async function confirmRemove() {
       ref="listEl"
       class="idea-list"
       :class="{ 'no-transition': dragging }"
+      :aria-hidden="expanded ? 'false' : 'true'"
       :style="listStyle"
       @pointerdown="onListPointerStart"
       @pointermove="onListPointerMove"

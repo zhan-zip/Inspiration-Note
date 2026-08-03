@@ -66,7 +66,7 @@ const weekDay = ['日', '一', '二', '三', '四', '五', '六'][new Date().get
           <span v-if="task.project_id" class="today-project">{{ projectNameOf(task.project_id) }}</span>
         </div>
       </template>
-      <p v-else class="empty">今天没有安排任务<br />去「日历」安排一些吧</p>
+      <p v-else class="empty">今天没有安排任务。<br />去「日历」安排一些吧</p>
     </div>
   </div>
 </template>

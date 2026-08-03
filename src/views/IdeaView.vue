@@ -227,7 +227,7 @@ async function confirmRemove() {
           <input v-model="convertMode" type="radio" value="existing" />
           归入已有项目
         </label>
-        <label v-if="projectStore.activeProjects.length" class="mode-option sub">
+        <label v-if="convertMode === 'existing' && projectStore.activeProjects.length" class="mode-option sub">
           <select v-model="convertProjectId" class="input">
             <option v-for="p in projectStore.activeProjects" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>

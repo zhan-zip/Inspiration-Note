@@ -37,7 +37,8 @@ let totalDx = 0
 let pointerCaptured = false
 
 function onPointerMove(e) {
-  // 鼠标未按住（hover）不处理；触摸无需检查 buttons（触摸必然 active）
+  if (e.pointerType === 'touch') return // 触摸由 touch 事件处理（pan-y 会拦截水平 pointermove）
+  // 鼠标未按住（hover）不处理
   if (e.pointerType === 'mouse' && e.buttons === 0) return
   const dx = e.clientX - startX.value
   const dy = e.clientY - startY.value
@@ -122,6 +123,45 @@ async function installApp() {
   const choice = await installEvt.value.userChoice
   if (choice.outcome === 'accepted') showInstall.value = false
 }
+
+/* 触摸手势（touch 事件不受 touch-action 拦截） */
+function onTouchStart(e) {
+  if (e.touches.length !== 1) return
+  startX.value = e.touches[0].clientX
+  startY.value = e.touches[0].clientY
+  startOpen.value = open.value > 0.5
+  totalDx = 0
+}
+
+function onTouchMove(e) {
+  if (e.touches.length !== 1) return
+  const dx = e.touches[0].clientX - startX.value
+  const dy = e.touches[0].clientY - startY.value
+  // 纵向拖动交给页面滚动
+  if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) <= 8) return
+  // 子页：右拉返回由子页自身处理
+  if (isChild.value) return
+  e.preventDefault()
+  totalDx = dx
+  const max = window.innerWidth * 0.28
+  let pct
+  if (startOpen.value) {
+    pct = 1 + dx / max
+  } else {
+    pct = dx / max
+  }
+  open.value = Math.max(0, Math.min(1, pct))
+}
+
+function onTouchEnd() {
+  const threshold = window.innerWidth * 0.12
+  if (isChild.value) return
+  if (startOpen.value) {
+    open.value = totalDx < -threshold ? 0 : 1
+  } else {
+    open.value = totalDx > threshold ? 1 : 0
+  }
+}
 </script>
 
 <template>
@@ -132,6 +172,10 @@ async function installApp() {
     @pointermove="onPointerMove"
     @pointerup="onPointerEnd"
     @pointercancel="onPointerEnd"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
+    @touchcancel="onTouchEnd"
   >
     <!-- 左侧页面导航列表（抽屉） -->
     <aside

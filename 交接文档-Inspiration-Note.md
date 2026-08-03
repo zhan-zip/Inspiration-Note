@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-03 23:59\
+**最后更新：** 2026-08-04 00:35\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -357,6 +357,13 @@ vite-plugin-pwa, idb
 - **修复**：灵感页 `touch-action: none`，下拉展开、上拉收起、列表滚动全部由 JS 处理
 - 浏览器实测：触摸下拉展开 ✓、顶部上拉收起 ✓
 - **补充（23:59）**：上拉收起改用「本次手势最大位移」判断（10px 即收回），DevTools 触摸事件丢失也能稳定识别；CDP 真实触摸 3 次全通过
+
+### 十二.18、2026-08-04 00:35 抽屉触摸修复 + 触摸手势统一
+
+- **根因**：`touch-action: pan-y` 时浏览器拦截**水平** `pointermove`，触摸右拉抽屉拖不动（灵感页因 `touch-action: none` 正常）
+- **修复**：抽屉拖动改用 **touch 事件**（touch 事件不受 touch-action 拦截），`pointer` 只处理鼠标
+- 灵感页保持 `touch-action: none`（pointer 处理下拉/上拉）
+- CDP 真实触摸验证：抽屉右拉打开 ✓、灵感页下拉展开 ✓
 
 ---
 

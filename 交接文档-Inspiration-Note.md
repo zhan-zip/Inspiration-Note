@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-03 21:40\
+**最后更新：** 2026-08-03 21:45\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -323,7 +323,7 @@ vite-plugin-pwa, idb
 - **PWA 图标**：sharp 生成黑白便签风格图标（`pwa-192/pwa-512/pwa-maskable-512/apple-touch-icon`），manifest 配置 icons + apple-touch-icon
 - **GitHub Actions**：`.github/workflows/deploy.yml`（`vite build` → 部署到 GitHub Pages）
 - **本地验证**：build 通过，manifest icons 完整，SW precache 14 项
-- **待确认**：线上地址 `https://zhan-zip.github.io/Inspiration-Note/`（Actions 跑完后验证）
+- **上线确认**：线上地址 `https://zhan-zip.github.io/Inspiration-Note/` 已可访问（HTTP 200；manifest / sw.js / 全部图标均 200）
 
 ---
 

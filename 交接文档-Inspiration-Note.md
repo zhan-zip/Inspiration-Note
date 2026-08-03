@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-03 20:52\
+**最后更新：** 2026-08-03 21:40\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -317,6 +317,13 @@ vite-plugin-pwa, idb
 - **浏览器实测**：全部通过
 - **修复（20:45）**：左滑展开后**不自动弹回**（区分拖动与点击，拖动后松手的 click 不触发关闭），需右滑或点击内容收回
 - **修复（20:48/20:52）**：项目条目**右滑收回时不再误触发跳转**（capture 阶段拦截拖动后的 click，在条目 `@click` 之前阻止），仅单击进入项目页
+
+### 十二.12、2026-08-03 21:40 P2 部署上线
+
+- **PWA 图标**：sharp 生成黑白便签风格图标（`pwa-192/pwa-512/pwa-maskable-512/apple-touch-icon`），manifest 配置 icons + apple-touch-icon
+- **GitHub Actions**：`.github/workflows/deploy.yml`（`vite build` → 部署到 GitHub Pages）
+- **本地验证**：build 通过，manifest icons 完整，SW precache 14 项
+- **待确认**：线上地址 `https://zhan-zip.github.io/Inspiration-Note/`（Actions 跑完后验证）
 
 ---
 

@@ -20,8 +20,11 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         start_url: '.',
-        // 图标阶段 9 补充真图标
-        icons: [],
+        icons: [
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],

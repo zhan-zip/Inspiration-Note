@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-03 23:58\
+**最后更新：** 2026-08-03 23:59\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -356,6 +356,7 @@ vite-plugin-pwa, idb
 - **根因**：`touch-action: pan-y` 让浏览器接管垂直手势，JS 收不到 `pointermove` → 下拉/上拉都无反应
 - **修复**：灵感页 `touch-action: none`，下拉展开、上拉收起、列表滚动全部由 JS 处理
 - 浏览器实测：触摸下拉展开 ✓、顶部上拉收起 ✓
+- **补充（23:59）**：上拉收起改用「本次手势最大位移」判断（10px 即收回），DevTools 触摸事件丢失也能稳定识别；CDP 真实触摸 3 次全通过
 
 ---
 

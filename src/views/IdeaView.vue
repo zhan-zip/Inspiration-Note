@@ -34,6 +34,7 @@ const listEl = ref(null)
 let startX = 0
 let startY = 0
 let tracking = false
+let minDragY = 0 // 本次手势上拉的最大距离（负值）
 
 /* 列表可视高度（用于限制拖动范围，防止拖出屏幕外卡住） */
 function listMax() {
@@ -94,6 +95,7 @@ function onListPointerStart(e) {
   startY = e.clientY
   tracking = true
   dragging.value = false
+  minDragY = 0
 }
 
 function onListPointerMove(e) {
@@ -108,6 +110,7 @@ function onListPointerMove(e) {
       // 列表在顶部上拉 → 收起（跟随）
       dragging.value = true
       dragY.value = clampY(dy)
+      if (dragY.value < minDragY) minDragY = dragY.value
     } else if (listEl.value) {
       // 否则列表滚动（JS 接管滚动）
       dragging.value = true
@@ -119,12 +122,13 @@ function onListPointerMove(e) {
 
 function onListPointerEnd() {
   if (tracking) {
+    tracking = false
     dragging.value = false
-    // 拉一点点（20px）松手即自动收回
-    if (expanded.value && dragY.value < -20) expanded.value = false
+    // 用本次上拉最大位移判断（10px 即收回，触摸事件丢失也能识别）
+    if (expanded.value && minDragY < -10) expanded.value = false
     dragY.value = 0
+    minDragY = 0
   }
-  tracking = false
 }
 
 /* ---------- 转为任务 ---------- */

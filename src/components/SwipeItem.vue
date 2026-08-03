@@ -52,15 +52,18 @@ function close() {
   offset.value = 0
 }
 
-/* 内容点击：若已展开则关闭且不冒泡（避免触发父级跳转），收起态正常冒泡。
-   拖动后松手产生的 click 不处理，避免左滑后自己弹回。 */
-function onContentClick(e) {
+/* capture 阶段拦截：拖动后的 click 在到达内层（如条目 @click）之前就阻止，
+   避免右滑收回时误触发父级跳转 */
+function onContentClickCapture(e) {
   if (wasDragging) {
     wasDragging = false
-    // 拖动后的 click 也阻止冒泡，避免右滑收回时误触发父级跳转（如项目条目）
     e.stopPropagation()
-    return
+    e.preventDefault()
   }
+}
+
+/* 内容点击（bubble 阶段）：非拖动点击且已展开则关闭收起态正常冒泡 */
+function onContentClick(e) {
   if (offset.value < 0) {
     close()
     e.stopPropagation()
@@ -75,10 +78,11 @@ function onContentClick(e) {
     <div ref="actionsRef" class="swipe-actions" :aria-hidden="offset < 0 ? 'false' : 'true'">
       <slot name="actions" :close="close" />
     </div>
-    <!-- 内容区：左滑时左移露出操作；展开后点击内容关闭且不冒泡 -->
+    <!-- 内容区：左滑时左移露出操作；capture 拦截拖动后的 click，避免误触发父级跳转 -->
     <div
       class="swipe-content"
       :style="{ transform: `translateX(${offset}px)` }"
+      @click.capture="onContentClickCapture"
       @click="onContentClick"
       @pointerdown="onPointerStart"
       @pointermove="onPointerMove"

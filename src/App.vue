@@ -102,6 +102,9 @@ function go(item) {
     <!-- 遮罩：抽屉打开时盖住主视图，点击关闭 -->
     <div v-if="open > 0.5" class="drawer-mask" @click="open = 0"></div>
 
+    <!-- 左缘引导：提示可向右拉展开抽屉（纯视觉，不拦截任何交互） -->
+    <div v-if="open < 0.5" class="edge-hint" aria-hidden="true"></div>
+
     <!-- 主视图 -->
     <main
       class="main"
@@ -112,8 +115,6 @@ function go(item) {
       @pointerup="onPointerEnd"
       @pointercancel="onPointerEnd"
     >
-      <!-- 可见导航入口：点击呼出抽屉 -->
-      <button v-if="open < 0.5" class="nav-toggle" @click="open = 1" aria-label="打开导航">≡</button>
       <RouterView />
     </main>
 
@@ -178,22 +179,31 @@ function go(item) {
   transition: none;
 }
 
-/* 可见导航入口按钮 */
-.nav-toggle {
+/* 左缘引导：细条提示可右拉展开抽屉，脉冲动画吸引注意，不拦截事件 */
+.edge-hint {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 40;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--fg);
-  background: var(--bg);
-  color: var(--fg);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 4px;
-  opacity: 0.92;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 52px;
+  background: var(--fg);
+  border-radius: 0 3px 3px 0;
+  opacity: 0.35;
+  z-index: 22;
+  pointer-events: none;
+  animation: edge-pulse 2.6s ease-in-out infinite;
+}
+@keyframes edge-pulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    opacity: 0.55;
+    transform: translateY(-50%) translateX(2px);
+  }
 }
 
 /* 全局 toast */

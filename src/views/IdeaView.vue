@@ -268,7 +268,7 @@ async function confirmRemove() {
 <style scoped>
 .idea-page {
   position: relative;
-  padding: 60px 20px 0;
+  padding: 24px 20px 0;
   height: 100dvh;
   overflow: hidden;
   user-select: none;

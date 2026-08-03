@@ -242,7 +242,7 @@ async function confirmRemoveTask() {
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 60px 20px 20px;
+  padding: 20px;
 }
 .page-head {
   display: flex;

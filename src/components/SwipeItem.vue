@@ -57,6 +57,8 @@ function close() {
 function onContentClick(e) {
   if (wasDragging) {
     wasDragging = false
+    // 拖动后的 click 也阻止冒泡，避免右滑收回时误触发父级跳转（如项目条目）
+    e.stopPropagation()
     return
   }
   if (offset.value < 0) {

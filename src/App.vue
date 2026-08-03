@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { toastState } from './toast.js'
 
 const route = useRoute()
 const router = useRouter()
 
-// 页面导航列表（主页=灵感，左滑呼出）
+// 页面导航列表（主页=灵感，右拉呼出）
 const navItems = [
   { path: '/', label: '灵感' },
   { path: '/tasks', label: '任务列表' },
@@ -19,12 +20,12 @@ const navItems = [
 const open = ref(0)
 const dragging = ref(false)
 
-// 抽屉滑出 / 主视图右移 联动
+// 抽屉滑出 / 主视图右移 联动（右移 70%，抽屉基本全露）
 const drawerX = computed(() => `${(open.value - 1) * 100}%`)
-const mainX = computed(() => `${open.value * 30}%`)
+const mainX = computed(() => `${open.value * 70}%`)
 
 // 手势状态（Pointer 事件：鼠标 + 触摸 + 触控笔统一支持）
-// 左滑 = 返回：子页（项目任务页）先返回上一级，一级页才打开抽屉
+// 右拉 = 返回/拉出：子页（项目任务页）先返回上一级，一级页拉出抽屉
 const startX = ref(0)
 const startY = ref(0)
 const startOpen = ref(false)
@@ -98,6 +99,9 @@ function go(item) {
       <p class="drawer-foot">本地存储 · 离线可用</p>
     </aside>
 
+    <!-- 遮罩：抽屉打开时盖住主视图，点击关闭 -->
+    <div v-if="open > 0.5" class="drawer-mask" @click="open = 0"></div>
+
     <!-- 主视图 -->
     <main
       class="main"
@@ -108,8 +112,17 @@ function go(item) {
       @pointerup="onPointerEnd"
       @pointercancel="onPointerEnd"
     >
+      <!-- 可见导航入口：点击呼出抽屉 -->
+      <button v-if="open < 0.5" class="nav-toggle" @click="open = 1" aria-label="打开导航">≡</button>
       <RouterView />
     </main>
+
+    <!-- 全局 toast -->
+    <div class="toasts">
+      <transition-group name="toast">
+        <div v-for="t in toastState.items" :key="t.id" class="toast">{{ t.msg }}</div>
+      </transition-group>
+    </div>
   </div>
 </template>
 
@@ -131,7 +144,15 @@ function go(item) {
   border-right: 1px solid var(--fg);
   display: flex;
   flex-direction: column;
-  z-index: 10;
+  z-index: 30;
+}
+
+/* 遮罩：盖住主视图，点击关闭抽屉 */
+.drawer-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 25;
 }
 
 .main {
@@ -155,6 +176,58 @@ function go(item) {
 .drawer.dragging,
 .main.dragging {
   transition: none;
+}
+
+/* 可见导航入口按钮 */
+.nav-toggle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 40;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.92;
+}
+
+/* 全局 toast */
+.toasts {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+.toast {
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 4px;
+  max-width: 80%;
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.25s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 .drawer-title {

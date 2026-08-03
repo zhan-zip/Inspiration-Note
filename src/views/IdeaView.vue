@@ -6,6 +6,7 @@ import { useProjectStore } from '../stores/project.js'
 import SwipeItem from '../components/SwipeItem.vue'
 import Modal from '../components/Modal.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { toast } from '../toast.js'
 
 const ideaStore = useIdeaStore()
 const taskStore = useTaskStore()
@@ -22,6 +23,7 @@ async function addIdea() {
   if (!text) return
   await ideaStore.create(text)
   draft.value = ''
+  toast('已记录 ✓')
 }
 
 /* ---------- 下拉展开 / 上拉收起（全屏覆盖层跟随手指） ---------- */
@@ -266,7 +268,7 @@ async function confirmRemove() {
 <style scoped>
 .idea-page {
   position: relative;
-  padding: 24px 20px 0;
+  padding: 60px 20px 0;
   height: 100dvh;
   overflow: hidden;
   user-select: none;

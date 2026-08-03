@@ -16,10 +16,12 @@ const actionsRef = ref(null)
 const offset = ref(0)
 let startX = 0
 let tracking = false
+let wasDragging = false
 
 function onPointerStart(e) {
   startX = e.clientX
   tracking = true
+  wasDragging = false
 }
 
 function onPointerMove(e) {
@@ -27,6 +29,7 @@ function onPointerMove(e) {
   if (e.buttons === 0) return
   const dx = e.clientX - startX
   if (Math.abs(dx) < 8) return
+  wasDragging = true
   e.preventDefault()
   if (offset.value < 0) {
     // 已展开：向右拖关闭
@@ -49,8 +52,13 @@ function close() {
   offset.value = 0
 }
 
-/* 内容点击：若已展开则关闭且不冒泡（避免触发父级跳转），收起态正常冒泡 */
+/* 内容点击：若已展开则关闭且不冒泡（避免触发父级跳转），收起态正常冒泡。
+   拖动后松手产生的 click 不处理，避免左滑后自己弹回。 */
 function onContentClick(e) {
+  if (wasDragging) {
+    wasDragging = false
+    return
+  }
   if (offset.value < 0) {
     close()
     e.stopPropagation()

@@ -8,6 +8,7 @@ import { useCompletionStore } from '../stores/completion.js'
 import SwipeItem from '../components/SwipeItem.vue'
 import Modal from '../components/Modal.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { toast } from '../toast.js'
 
 const router = useRouter()
 const taskStore = useTaskStore()
@@ -46,6 +47,12 @@ function goProject(id) {
 /* 加入日程 → 跳日历页并自动选中该任务 */
 function addToSchedule(task) {
   router.push({ path: '/calendar', query: { task: task.id } })
+}
+
+/* 撤回安排 → 删除该任务所有日程，恢复正常显示 */
+async function recallSchedule(task) {
+  await scheduleStore.removeByTask(task.id)
+  toast('已撤回安排')
 }
 
 /* ---------- 新建任务 ---------- */
@@ -165,7 +172,13 @@ async function confirmRemoveTask() {
               >
                 + 加入日程
               </button>
-              <span v-else class="meta-item scheduled-tag">已安排</span>
+              <button
+                v-else
+                class="btn schedule-btn recall-btn"
+                @click.stop="recallSchedule(t)"
+              >
+                撤回安排
+              </button>
             </div>
           </div>
           <template #actions="{ close }">

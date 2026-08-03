@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-03 21:52\
+**最后更新：** 2026-08-03 22:05\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -330,6 +330,8 @@ vite-plugin-pwa, idb
 - **触摸滑动修复**：`e.buttons === 0` 检查改为**仅鼠标生效**（触摸时 buttons 可能为 0，导致手机滑不动）；抽屉/灵感下拉/项目右拉/SwipeItem 全部手势已修
 - **应用内安装按钮**：`beforeinstallprompt` 检测到可安装时右下角显示「安装应用」按钮，点击触发安装；`appinstalled` 后隐藏
 - **浏览器实测**：模拟触摸（buttons=0）可滑动、安装按钮正常显示
+- **补充（22:05）**：模拟触摸全流程验证通过（下拉/上拉/右拉抽屉均正常）；灵感页补 `touch-action: pan-y` + `overscroll-behavior: none` 确保真实手机下拉顺畅
+- **提示**：iOS Safari 从屏幕最左边缘右滑是系统返回手势，无法被网页阻止；从边缘内侧一点开始滑即可正常拉抽屉
 
 ---
 

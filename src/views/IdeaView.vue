@@ -273,6 +273,9 @@ async function confirmRemove() {
   height: 100dvh;
   overflow: hidden;
   user-select: none;
+  /* 下拉手势优先：允许纵向手势交给 JS，阻止浏览器 overscroll 干扰 */
+  touch-action: pan-y;
+  overscroll-behavior: none;
 }
 
 .idea-title {

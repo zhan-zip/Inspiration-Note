@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/project.js'
 import { useTaskStore } from '../stores/task.js'
+import { useScheduleStore } from '../stores/schedule.js'
+import { useCompletionStore } from '../stores/completion.js'
 import SwipeItem from '../components/SwipeItem.vue'
 import Modal from '../components/Modal.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -12,17 +14,34 @@ const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
 const taskStore = useTaskStore()
+const scheduleStore = useScheduleStore()
+const completionStore = useCompletionStore()
 
 onMounted(async () => {
-  await Promise.all([projectStore.load(), taskStore.load()])
+  await Promise.all([
+    projectStore.load(),
+    taskStore.load(),
+    scheduleStore.load(),
+    completionStore.load(),
+  ])
 })
 
 const project = computed(() => projectStore.activeProjects.find((p) => p.id === route.params.id))
 
-/* 该项目下的任务 */
+/* 该项目下的任务（未完成，打钩过的从列表消失），与任务列表页一致 */
 const tasks = computed(() =>
-  taskStore.activeTasks.filter((t) => t.project_id === route.params.id),
+  taskStore.activeTasks
+    .filter((t) => t.project_id === route.params.id)
+    .filter((t) => completionStore.byTaskId(t.id).length === 0),
 )
+
+/* 是否已安排日程 */
+const hasSchedule = (taskId) => scheduleStore.byTaskId(taskId).length > 0
+
+/* 加入日程 → 跳日历自动选中该任务 */
+function addToSchedule(task) {
+  router.push({ path: '/calendar', query: { task: task.id } })
+}
 
 /* ---------- 右拉返回任务列表（跟随拖动） ---------- */
 const dragX = ref(0)
@@ -155,8 +174,20 @@ async function confirmRemoveTask() {
           <div class="task-list">
             <template v-if="tasks.length">
               <SwipeItem v-for="task in tasks" :key="task.id">
-                <div class="task-item">
+                <div class="task-item" :class="{ scheduled: hasSchedule(task.id) }">
                   <span class="task-name">{{ task.name }}</span>
+                  <div class="task-meta">
+                    <span class="meta-item">{{ project?.name ?? '无项目' }}</span>
+                    <span class="meta-item">{{ task.created_at.slice(0, 10) }}</span>
+                    <button
+                      v-if="!hasSchedule(task.id)"
+                      class="btn schedule-btn"
+                      @click.stop="addToSchedule(task)"
+                    >
+                      + 加入日程
+                    </button>
+                    <span v-else class="meta-item scheduled-tag">已安排</span>
+                  </div>
                 </div>
                 <template #actions="{ close }">
                   <button class="swipe-action edit" @click="openEditTask(task); close()">编辑</button>
@@ -269,11 +300,37 @@ async function confirmRemoveTask() {
   border-top: 1px solid var(--light);
 }
 .task-item {
-  padding: 15px 2px;
+  padding: 13px 2px;
   border-bottom: 1px solid var(--light);
 }
 .task-name {
   font-size: 16px;
+}
+/* 已安排日程的任务整体灰字 */
+.task-item.scheduled .task-name,
+.task-item.scheduled .meta-item {
+  color: var(--mid);
+}
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.meta-item {
+  font-size: 12px;
+  color: var(--gray);
+}
+.schedule-btn {
+  font-size: 12px;
+  padding: 2px 10px;
+  min-height: 32px;
+  min-width: auto;
+  margin-left: auto;
+}
+.scheduled-tag {
+  margin-left: auto;
+  font-size: 12px;
 }
 .swipe-action {
   height: 100%;

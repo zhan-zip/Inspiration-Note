@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-04 00:35\
+**最后更新：** 2026-08-04 01:22\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -364,6 +364,13 @@ vite-plugin-pwa, idb
 - **修复**：抽屉拖动改用 **touch 事件**（touch 事件不受 touch-action 拦截），`pointer` 只处理鼠标
 - 灵感页保持 `touch-action: none`（pointer 处理下拉/上拉）
 - CDP 真实触摸验证：抽屉右拉打开 ✓、灵感页下拉展开 ✓
+
+### 十二.19、2026-08-04 01:22 全手势触摸修复（SwipeItem / 项目右拉）
+
+- **SwipeItem 左滑**改用 touch 事件（pan-y 拦截水平 pointermove 导致左滑拖不动），编辑/删除可正常露出
+- **项目任务页右拉返回**改用 touch 事件
+- **CDP 真实触摸验证**：抽屉 / 灵感下拉上拉 / SwipeItem 左滑 / 项目右拉返回全部正常
+- 统一方案：pan-y 页面上的手势用 touch 事件处理，pointer 仅用于鼠标
 
 ---
 

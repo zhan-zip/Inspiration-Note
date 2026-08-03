@@ -66,6 +66,7 @@ function onPagePointerDown(e) {
 }
 
 function onPagePointerMove(e) {
+  if (e.pointerType === 'touch') return // 触摸由 touch 事件处理
   if (!tracking || (e.pointerType === 'mouse' && e.buttons === 0)) return
   const dx = e.clientX - startX
   const dy = e.clientY - startY
@@ -79,6 +80,34 @@ function onPagePointerMove(e) {
 function onPagePointerEnd() {
   if (!tracking) return
   tracking = false
+  finishPull()
+}
+
+/* 触摸右拉返回（touch 事件不受 touch-action 拦截） */
+let touchStartX = 0
+let touchTracking = false
+function onPageTouchStart(e) {
+  if (e.touches.length !== 1) return
+  touchStartX = e.touches[0].clientX
+  touchTracking = true
+  pulling.value = false
+  dragX.value = 0
+}
+function onPageTouchMove(e) {
+  if (e.touches.length !== 1 || !touchTracking) return
+  const dx = e.touches[0].clientX - touchStartX
+  if (dx < 8) return // 只处理右拉
+  pulling.value = true
+  dragX.value = Math.max(0, Math.min(dx, window.innerWidth * 0.7))
+  e.preventDefault()
+}
+function onPageTouchEnd() {
+  if (!touchTracking) return
+  touchTracking = false
+  finishPull()
+}
+
+function finishPull() {
   const w = window.innerWidth
   if (pulling.value && dragX.value > w * 0.25) {
     // 超过阈值：任务列表平滑滑满（衔接滑动，不飞出），随后切回任务列表
@@ -163,6 +192,10 @@ async function confirmRemoveTask() {
       @pointermove="onPagePointerMove"
       @pointerup="onPagePointerEnd"
       @pointercancel="onPagePointerEnd"
+      @touchstart="onPageTouchStart"
+      @touchmove="onPageTouchMove"
+      @touchend="onPageTouchEnd"
+      @touchcancel="onPageTouchEnd"
     >
       <div class="page-inner">
         <div class="page-head">

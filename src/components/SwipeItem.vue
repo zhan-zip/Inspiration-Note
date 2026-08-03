@@ -17,6 +17,9 @@ const offset = ref(0)
 let startX = 0
 let tracking = false
 let wasDragging = false
+let touchStartX = 0
+let touchTracking = false
+let touchDragged = false
 
 function onPointerStart(e) {
   startX = e.clientX
@@ -25,6 +28,7 @@ function onPointerStart(e) {
 }
 
 function onPointerMove(e) {
+  if (e.pointerType === 'touch') return // 触摸由 touch 事件处理（pan-y 拦截水平 pointermove）
   if (!tracking) return
   if (e.pointerType === 'mouse' && e.buttons === 0) return
   const dx = e.clientX - startX
@@ -44,6 +48,31 @@ function onPointerEnd() {
   tracking = false
 }
 
+/* 触摸左滑（touch 事件不受 touch-action 拦截） */
+function onTouchStart(e) {
+  if (e.touches.length !== 1) return
+  touchStartX = e.touches[0].clientX
+  touchTracking = true
+  touchDragged = false
+}
+
+function onTouchMove(e) {
+  if (e.touches.length !== 1 || !touchTracking) return
+  const dx = e.touches[0].clientX - touchStartX
+  if (Math.abs(dx) < 8) return
+  touchDragged = true
+  e.preventDefault()
+  if (offset.value < 0) {
+    if (dx > 8) close()
+  } else {
+    if (dx < -40) open()
+  }
+}
+
+function onTouchEnd() {
+  touchTracking = false
+}
+
 function open() {
   // 按操作区实际宽度左移（支持多个按钮）
   offset.value = -(actionsRef.value?.offsetWidth || 72)
@@ -55,8 +84,9 @@ function close() {
 /* capture 阶段拦截：拖动后的 click 在到达内层（如条目 @click）之前就阻止，
    避免右滑收回时误触发父级跳转 */
 function onContentClickCapture(e) {
-  if (wasDragging) {
+  if (wasDragging || touchDragged) {
     wasDragging = false
+    touchDragged = false
     e.stopPropagation()
     e.preventDefault()
   }
@@ -64,6 +94,11 @@ function onContentClickCapture(e) {
 
 /* 内容点击（bubble 阶段）：非拖动点击且已展开则关闭收起态正常冒泡 */
 function onContentClick(e) {
+  if (wasDragging || touchDragged) {
+    wasDragging = false
+    touchDragged = false
+    return
+  }
   if (offset.value < 0) {
     close()
     e.stopPropagation()
@@ -88,6 +123,10 @@ function onContentClick(e) {
       @pointermove="onPointerMove"
       @pointerup="onPointerEnd"
       @pointercancel="onPointerEnd"
+      @touchstart="onTouchStart"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+      @touchcancel="onTouchEnd"
     >
       <slot :is-open="offset < 0" :close="close" />
     </div>

@@ -45,11 +45,15 @@ function clampY(v) {
 }
 
 const listStyle = computed(() => {
-  if (dragging.value) {
-    // 下拉（从顶部盖下来）：dragY>0 → -100% 开始跟随；上拉收回：dragY<0 → 从 0 跟随
-    if (dragY.value >= 0) return { transform: `translateY(calc(-100% + ${dragY.value}px))` }
+  // 展开态上拉收起：跟随 dragY（负值）
+  if (dragging.value && expanded.value && dragY.value < 0) {
     return { transform: `translateY(${dragY.value}px)` }
   }
+  // 收起态下拉展开：从顶部跟随
+  if (dragging.value && !expanded.value) {
+    return { transform: `translateY(calc(-100% + ${dragY.value}px))` }
+  }
+  // 展开态滚动 / 静止：列表正常显示
   return { transform: expanded.value ? 'translateY(0)' : 'translateY(-100%)' }
 })
 
@@ -99,9 +103,16 @@ function onListPointerMove(e) {
   const dy = e.clientY - startY
   if (Math.abs(dx) > Math.abs(dy)) return // 横向拖动交给抽屉
   const atTop = !listEl.value || listEl.value.scrollTop <= 1
-  if (expanded.value && dy < 0 && atTop) {
-    dragging.value = true
-    dragY.value = clampY(dy)
+  if (expanded.value) {
+    if (dy < 0 && atTop) {
+      // 列表在顶部上拉 → 收起（跟随）
+      dragging.value = true
+      dragY.value = clampY(dy)
+    } else if (listEl.value) {
+      // 否则列表滚动（JS 接管滚动）
+      dragging.value = true
+      listEl.value.scrollTop -= dy
+    }
     e.preventDefault()
   }
 }
@@ -161,6 +172,7 @@ async function confirmRemove() {
 <template>
   <div
     class="page idea-page"
+    :class="{ expanded }"
     @pointerdown="onPointerStart"
     @pointermove="onPointerMove"
     @pointerup="onPointerEnd"
@@ -273,9 +285,9 @@ async function confirmRemove() {
   height: 100dvh;
   overflow: hidden;
   user-select: none;
-  /* 下拉手势优先：允许纵向手势交给 JS，阻止浏览器 overscroll 干扰 */
-  touch-action: pan-y;
   overscroll-behavior: none;
+  /* 禁用浏览器 pan：下拉/上拉/列表滚动全部交给 JS 手势处理 */
+  touch-action: none;
 }
 
 .idea-title {

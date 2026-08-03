@@ -15,9 +15,10 @@ const projectStore = useProjectStore()
 
 onMounted(async () => {
   await Promise.all([taskStore.load(), scheduleStore.load(), projectStore.load()])
-  // 来自「加入日程」跳转：自动选中该任务
+  // 来自「加入日程」跳转：自动选中该任务 + 提示选一天
   if (route.query.task) {
     addTaskId.value = route.query.task
+    toast('请选择一天安排该任务')
   }
 })
 
@@ -105,22 +106,22 @@ const TYPE_LABEL = { once: '单次', weekly: '每周', monthly: '每月', yearly
 /* 添加安排 */
 const addTaskId = ref('')
 const addType = ref('once')
-async function openDay(date) {
-  // 来自「加入日程」预置的任务：点日期直接安排（单次）
-  if (addTaskId.value) {
-    await scheduleStore.create(addTaskId.value, toDateStr(date), 'once')
-    toast(`已安排到 ${toDateStr(date)}`)
-    addTaskId.value = ''
-    return
-  }
+
+/* 可安排的任务：未删除且尚未安排日程（已安排的不再出现在下拉框） */
+const schedulableTasks = computed(() =>
+  taskStore.activeTasks.filter((t) => scheduleStore.byTaskId(t.id).length === 0),
+)
+function openDay(date) {
+  // 打开安排弹窗让用户确认；来自「加入日程」的任务已预选在 addTaskId
   selected.value = date
-  addTaskId.value = ''
   addType.value = 'once'
 }
 async function confirmSchedule() {
   if (!addTaskId.value) return
   await scheduleStore.create(addTaskId.value, dayStr.value, addType.value)
+  toast(`已添加到 ${dayStr.value}`)
   addTaskId.value = ''
+  selected.value = null
 }
 async function removeSchedule(id) {
   await scheduleStore.remove(id)
@@ -188,7 +189,7 @@ const projectNameOf = (id) => projectStore.activeProjects.find((p) => p.id === i
       <p class="section-label">添加安排</p>
       <select v-model="addTaskId" class="input">
         <option value="" disabled>选择任务…</option>
-        <option v-for="t in taskStore.activeTasks" :key="t.id" :value="t.id">{{ t.name }}</option>
+        <option v-for="t in schedulableTasks" :key="t.id" :value="t.id">{{ t.name }}</option>
       </select>
       <div class="type-row">
         <label v-for="(label, val) in TYPE_LABEL" :key="val" class="type-option">

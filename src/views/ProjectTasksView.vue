@@ -40,7 +40,7 @@ function onPagePointerDown(e) {
 }
 
 function onPagePointerMove(e) {
-  if (!tracking || e.buttons === 0) return
+  if (!tracking || (e.pointerType === 'mouse' && e.buttons === 0)) return
   const dx = e.clientX - startX
   const dy = e.clientY - startY
   if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) < 8) return

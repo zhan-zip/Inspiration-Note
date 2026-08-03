@@ -19,6 +19,9 @@ const navItems = [
 // 抽屉开关状态：0=关闭，1=打开
 const open = ref(0)
 const dragging = ref(false)
+// PWA 安装引导
+const installEvt = ref(null)
+const showInstall = ref(false)
 
 // 抽屉滑出 / 主视图右移 联动（右移 70%，抽屉基本全露）
 const drawerX = computed(() => `${(open.value - 1) * 100}%`)
@@ -34,8 +37,8 @@ let totalDx = 0
 let pointerCaptured = false
 
 function onPointerMove(e) {
-  // 鼠标未按住（hover 移动）不处理，只有按下拖动才触发手势
-  if (e.buttons === 0) return
+  // 鼠标未按住（hover）不处理；触摸无需检查 buttons（触摸必然 active）
+  if (e.pointerType === 'mouse' && e.buttons === 0) return
   const dx = e.clientX - startX.value
   const dy = e.clientY - startY.value
   // 横向位移主导才认作手势，避免与页面纵向滚动冲突
@@ -102,7 +105,23 @@ onMounted(() => {
     toast('左滑条目可编辑/删除')
     localStorage.setItem('inspiration-guide', '1')
   }
+  // PWA 安装引导
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    installEvt.value = e
+    showInstall.value = true
+  })
+  window.addEventListener('appinstalled', () => {
+    showInstall.value = false
+  })
 })
+
+async function installApp() {
+  if (!installEvt.value) return
+  installEvt.value.prompt()
+  const choice = await installEvt.value.userChoice
+  if (choice.outcome === 'accepted') showInstall.value = false
+}
 </script>
 
 <template>
@@ -153,6 +172,9 @@ onMounted(() => {
         <div v-for="t in toastState.items" :key="t.id" class="toast">{{ t.msg }}</div>
       </transition-group>
     </div>
+
+    <!-- PWA 安装引导按钮 -->
+    <button v-if="showInstall" class="install-btn" @click="installApp">安装应用</button>
   </div>
 </template>
 
@@ -243,6 +265,24 @@ onMounted(() => {
     opacity: 0.55;
     transform: translateY(-50%) translateX(2px);
   }
+}
+
+/* PWA 安装引导按钮 */
+.install-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 24px;
+  z-index: 60;
+  background: var(--fg);
+  color: var(--bg);
+  border: none;
+  padding: 12px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 24px;
+  cursor: pointer;
+  min-height: 44px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 /* 全局 toast */

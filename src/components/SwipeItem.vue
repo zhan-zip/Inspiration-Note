@@ -26,7 +26,7 @@ function onPointerStart(e) {
 
 function onPointerMove(e) {
   if (!tracking) return
-  if (e.buttons === 0) return
+  if (e.pointerType === 'mouse' && e.buttons === 0) return
   const dx = e.clientX - startX
   if (Math.abs(dx) < 8) return
   wasDragging = true

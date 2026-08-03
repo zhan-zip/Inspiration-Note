@@ -40,6 +40,8 @@ function onPointerMove(e) {
   const dy = e.clientY - startY.value
   // 横向位移主导才认作手势，避免与页面纵向滚动冲突
   if (Math.abs(dx) <= Math.abs(dy) || Math.abs(dx) <= 8) return
+  // 子页：横向手势完全由子页自身处理（右拉衔接返回任务列表），本容器不接管、不捕获指针
+  if (isChild.value) return
   dragging.value = true
   totalDx = dx
   // 判定为拖拽后才捕获指针（避免普通点击的 click 被重定向）
@@ -52,8 +54,6 @@ function onPointerMove(e) {
     }
   }
   e.preventDefault()
-  // 子页：横向手势完全用于"返回"，完全不碰抽屉状态
-  if (isChild.value) return
   const max = window.innerWidth * 0.28
   let pct
   if (startOpen.value) {
@@ -77,18 +77,10 @@ function onPointerDown(e) {
 
 function onPointerEnd() {
   dragging.value = false
+  // 子页：手势由子页自身处理，本容器不改变抽屉状态
+  if (isChild.value) return
   // 用「本次累计拖拽位移」决定最终开关，避免松手时停在半开状态
   const threshold = window.innerWidth * 0.12
-  if (isChild.value) {
-    // 子页：左滑返回上一级
-    if (totalDx < -60) {
-      open.value = 0
-      router.back()
-    } else {
-      open.value = open.value > 0.5 ? 1 : 0
-    }
-    return
-  }
   if (startOpen.value) {
     // 抽屉开着：向左推超过阈值 → 关闭，否则保持打开
     open.value = totalDx < -threshold ? 0 : 1

@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-04 15:00\
+**最后更新：** 2026-08-04 18:52\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -378,6 +378,12 @@ vite-plugin-pwa, idb
 - **改进**：未安装（非 standalone）时右下角**始终显示「安装应用」按钮**（可关闭，localStorage 记录）
 - 安卓点击 → 触发系统安装弹窗；iOS 点击 → 弹出「添加到主屏幕」操作说明浮窗
 - 浏览器实测通过
+
+### 十二.21、2026-08-04 18:52 安装弹窗根因修复
+
+- **根因**：① `beforeinstallprompt` 仅 Chrome/Edge 支持（国产浏览器无此事件，无法弹系统安装框）；② 此前对事件做了 `e.preventDefault()` 阻止了 Chrome 主动弹安装横幅
+- **修复**：移除 `e.preventDefault()`——Chrome 判定可安装时**主动弹系统安装框**；安装按钮 fallback 说明区分**安卓（菜单→安装应用）**与 **iOS（分享→添加到主屏幕）**
+- **待确认**：用户手机浏览器是否为 Chrome for Android
 
 ---
 

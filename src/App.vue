@@ -26,6 +26,7 @@ const showInstallHelp = ref(false)
 const isStandalone =
   window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 const showInstall = ref(!isStandalone && !localStorage.getItem('install-dismissed'))
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 
 // 抽屉滑出 / 主视图右移 联动（右移 70%，抽屉基本全露）
 const drawerX = computed(() => `${(open.value - 1) * 100}%`)
@@ -110,9 +111,8 @@ onMounted(() => {
     toast('左滑条目可编辑/删除')
     localStorage.setItem('inspiration-guide', '1')
   }
-  // PWA 安装引导
+  // PWA 安装引导（不 preventDefault：让 Chrome 判定可安装时主动弹系统安装框）
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault()
     installEvt.value = e
     showInstall.value = true
   })
@@ -239,13 +239,19 @@ function onTouchEnd() {
       <button class="install-close" @click="dismissInstall" aria-label="关闭">×</button>
     </div>
 
-    <!-- iOS 安装说明 -->
+    <!-- 安装说明（安卓 / iOS 分开） -->
     <div v-if="showInstallHelp" class="install-help-mask" @click.self="showInstallHelp = false">
       <div class="install-help">
-        <h3 class="help-title">安装到主屏幕</h3>
+        <h3 class="help-title">{{ isIOS ? '安装到主屏幕' : '安装应用' }}</h3>
         <ol class="help-steps">
-          <li>点浏览器底部 / 右上角「<b>分享</b>」按钮</li>
-          <li>选择「<b>添加到主屏幕</b>」</li>
+          <template v-if="isIOS">
+            <li>点浏览器底部 / 右上角「<b>分享</b>」按钮</li>
+            <li>选择「<b>添加到主屏幕</b>」</li>
+          </template>
+          <template v-else>
+            <li>点浏览器右上角菜单「<b>⋮</b>」</li>
+            <li>选择「<b>安装应用</b>」或「<b>添加到主屏幕</b>」</li>
+          </template>
           <li>完成后从主屏幕打开，即可离线使用</li>
         </ol>
         <button class="btn btn-dark" @click="showInstallHelp = false">知道了</button>

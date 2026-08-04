@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-04 18:52\
+**最后更新：** 2026-08-04 19:08\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -384,6 +384,12 @@ vite-plugin-pwa, idb
 - **根因**：① `beforeinstallprompt` 仅 Chrome/Edge 支持（国产浏览器无此事件，无法弹系统安装框）；② 此前对事件做了 `e.preventDefault()` 阻止了 Chrome 主动弹安装横幅
 - **修复**：移除 `e.preventDefault()`——Chrome 判定可安装时**主动弹系统安装框**；安装按钮 fallback 说明区分**安卓（菜单→安装应用）**与 **iOS（分享→添加到主屏幕）**
 - **待确认**：用户手机浏览器是否为 Chrome for Android
+
+### 十二.22、2026-08-04 19:08 恢复 SW 自动注入（修复默认浏览器安装判定）
+
+- **根因**：此前改为手动注册 SW（`injectRegister: false` + `virtual:pwa-register`），可能影响浏览器对"可安装"的判定，导致小米默认浏览器不再弹系统安装框
+- **修复**：恢复 vite-plugin-pwa **自动注入 registerSW.js**（与昨晚首次上线能弹的版本一致）
+- 自动更新仍保留 `registerType: 'autoUpdate'`（下次打开自动新版）
 
 ---
 

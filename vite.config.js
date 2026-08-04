@@ -9,7 +9,6 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: false, // 手动注册 SW（实现新版本自动刷新）
       includeAssets: ['favicon.svg'],
       manifest: {
         name: '灵感笔记 Inspiration-Note',

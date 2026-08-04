@@ -21,7 +21,11 @@ const open = ref(0)
 const dragging = ref(false)
 // PWA 安装引导
 const installEvt = ref(null)
-const showInstall = ref(false)
+const showInstallHelp = ref(false)
+// 已安装（standalone 模式）则不再提示
+const isStandalone =
+  window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+const showInstall = ref(!isStandalone && !localStorage.getItem('install-dismissed'))
 
 // 抽屉滑出 / 主视图右移 联动（右移 70%，抽屉基本全露）
 const drawerX = computed(() => `${(open.value - 1) * 100}%`)
@@ -114,14 +118,26 @@ onMounted(() => {
   })
   window.addEventListener('appinstalled', () => {
     showInstall.value = false
+    localStorage.removeItem('install-dismissed')
   })
 })
 
-async function installApp() {
-  if (!installEvt.value) return
-  installEvt.value.prompt()
-  const choice = await installEvt.value.userChoice
-  if (choice.outcome === 'accepted') showInstall.value = false
+function installApp() {
+  if (installEvt.value) {
+    // 安卓 Chrome：触发系统安装弹窗
+    installEvt.value.prompt()
+    installEvt.value.userChoice.then((r) => {
+      if (r.outcome === 'accepted') showInstall.value = false
+    })
+    return
+  }
+  // iOS / 无自动安装事件：弹出操作说明
+  showInstallHelp.value = true
+}
+
+function dismissInstall() {
+  showInstall.value = false
+  localStorage.setItem('install-dismissed', '1')
 }
 
 /* 触摸手势（touch 事件不受 touch-action 拦截） */
@@ -218,7 +234,23 @@ function onTouchEnd() {
     </div>
 
     <!-- PWA 安装引导按钮 -->
-    <button v-if="showInstall" class="install-btn" @click="installApp">安装应用</button>
+    <div v-if="showInstall" class="install-btn-wrap">
+      <button class="install-btn" @click="installApp">安装应用</button>
+      <button class="install-close" @click="dismissInstall" aria-label="关闭">×</button>
+    </div>
+
+    <!-- iOS 安装说明 -->
+    <div v-if="showInstallHelp" class="install-help-mask" @click.self="showInstallHelp = false">
+      <div class="install-help">
+        <h3 class="help-title">安装到主屏幕</h3>
+        <ol class="help-steps">
+          <li>点浏览器底部 / 右上角「<b>分享</b>」按钮</li>
+          <li>选择「<b>添加到主屏幕</b>」</li>
+          <li>完成后从主屏幕打开，即可离线使用</li>
+        </ol>
+        <button class="btn btn-dark" @click="showInstallHelp = false">知道了</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -312,11 +344,16 @@ function onTouchEnd() {
 }
 
 /* PWA 安装引导按钮 */
-.install-btn {
+.install-btn-wrap {
   position: fixed;
   bottom: 28px;
   right: 24px;
   z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.install-btn {
   background: var(--fg);
   color: var(--bg);
   border: none;
@@ -327,6 +364,45 @@ function onTouchEnd() {
   cursor: pointer;
   min-height: 44px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.install-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* iOS 安装说明浮窗 */
+.install-help-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+}
+.install-help {
+  background: var(--bg);
+  width: 82%;
+  max-width: 340px;
+  padding: 24px;
+  border: 1px solid var(--fg);
+}
+.help-title {
+  font-size: 20px;
+  margin: 0 0 14px;
+}
+.help-steps {
+  margin: 0 0 18px;
+  padding-left: 20px;
+  font-size: 15px;
+  line-height: 1.9;
 }
 
 /* 全局 toast */

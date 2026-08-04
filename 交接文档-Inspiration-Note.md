@@ -213,7 +213,7 @@ vite-plugin-pwa, idb
 
 ---
 
-**最后更新：** 2026-08-04 01:22\
+**最后更新：** 2026-08-04 15:00\
 **项目路径：** `D:\Desktop\test\claude-test\inspiration-note\`\
 **开发周期：** 个人工具，持续迭代
 
@@ -371,6 +371,13 @@ vite-plugin-pwa, idb
 - **项目任务页右拉返回**改用 touch 事件
 - **CDP 真实触摸验证**：抽屉 / 灵感下拉上拉 / SwipeItem 左滑 / 项目右拉返回全部正常
 - 统一方案：pan-y 页面上的手势用 touch 事件处理，pointer 仅用于鼠标
+
+### 十二.20、2026-08-04 15:00 安装引导改进（手机也有明显提示）
+
+- **原因**：iPhone Safari 不支持 `beforeinstallprompt`，此前手机上无安装提示
+- **改进**：未安装（非 standalone）时右下角**始终显示「安装应用」按钮**（可关闭，localStorage 记录）
+- 安卓点击 → 触发系统安装弹窗；iOS 点击 → 弹出「添加到主屏幕」操作说明浮窗
+- 浏览器实测通过
 
 ---
 
